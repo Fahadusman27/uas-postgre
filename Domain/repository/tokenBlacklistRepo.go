@@ -5,30 +5,47 @@ import (
 	"time"
 )
 
-// In-memory token blacklist (alternatif tanpa tabel database)
-// Untuk production, gunakan Redis
-var (
-	tokenBlacklist = make(map[string]time.Time)
-	blacklistMutex sync.RWMutex
-)
+// TokenBlacklistRepository interface untuk abstraksi data access
+type TokenBlacklistRepository interface {
+	Add(token string, expiresAt time.Time) error
+	Exists(token string) (bool, error)
+	Remove(token string) error
+	Cleanup() error
+}
 
-func AddTokenToBlacklist(token string, expiresAt time.Time) error {
-	blacklistMutex.Lock()
-	defer blacklistMutex.Unlock()
-	tokenBlacklist[token] = expiresAt
+// InMemoryTokenBlacklist implementasi repository dengan in-memory storage
+// Untuk production, buat implementasi dengan Redis atau database
+type InMemoryTokenBlacklist struct {
+	storage map[string]time.Time
+	mu      sync.RWMutex
+}
+
+// NewInMemoryTokenBlacklist membuat instance repository baru
+func NewInMemoryTokenBlacklist() *InMemoryTokenBlacklist {
+	return &InMemoryTokenBlacklist{
+		storage: make(map[string]time.Time),
+	}
+}
+
+// Add menambahkan token ke blacklist
+func (r *InMemoryTokenBlacklist) Add(token string, expiresAt time.Time) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.storage[token] = expiresAt
 	return nil
 }
 
-func IsTokenBlacklisted(token string) (bool, error) {
-	blacklistMutex.RLock()
-	defer blacklistMutex.RUnlock()
+// Exists mengecek apakah token ada di blacklist dan masih valid
+func (r *InMemoryTokenBlacklist) Exists(token string) (bool, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	expiresAt, exists := tokenBlacklist[token]
+	expiresAt, exists := r.storage[token]
 	if !exists {
 		return false, nil
 	}
 
-	// Cek apakah token sudah expired
+	// Token dianggap tidak ada jika sudah expired
 	if time.Now().After(expiresAt) {
 		return false, nil
 	}
@@ -36,15 +53,43 @@ func IsTokenBlacklisted(token string) (bool, error) {
 	return true, nil
 }
 
-func CleanupExpiredTokens() error {
-	blacklistMutex.Lock()
-	defer blacklistMutex.Unlock()
+// Remove menghapus token dari blacklist
+func (r *InMemoryTokenBlacklist) Remove(token string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.storage, token)
+	return nil
+}
+
+// Cleanup menghapus semua token yang sudah expired
+func (r *InMemoryTokenBlacklist) Cleanup() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	now := time.Now()
-	for token, expiresAt := range tokenBlacklist {
+	for token, expiresAt := range r.storage {
 		if now.After(expiresAt) {
-			delete(tokenBlacklist, token)
+			delete(r.storage, token)
 		}
 	}
 	return nil
+}
+
+// Global instance untuk backward compatibility
+// TODO: Refactor untuk menggunakan dependency injection
+var defaultBlacklist = NewInMemoryTokenBlacklist()
+
+// AddTokenToBlacklist - wrapper function untuk backward compatibility
+func AddTokenToBlacklist(token string, expiresAt time.Time) error {
+	return defaultBlacklist.Add(token, expiresAt)
+}
+
+// IsTokenBlacklisted - wrapper function untuk backward compatibility
+func IsTokenBlacklisted(token string) (bool, error) {
+	return defaultBlacklist.Exists(token)
+}
+
+// CleanupExpiredTokens - wrapper function untuk backward compatibility
+func CleanupExpiredTokens() error {
+	return defaultBlacklist.Cleanup()
 }

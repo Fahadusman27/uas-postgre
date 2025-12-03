@@ -8,10 +8,15 @@ import (
 
 func main() {
 	LoadEnv()
+
+	// Connect PostgreSQL
 	db := ConnectDB()
 	if err := db.Ping(); err != nil {
-		log.Fatal("Koneksi database gagal: ", err)
+		log.Fatal("Koneksi PostgreSQL gagal: ", err)
 	}
+
+	// Connect MongoDB
+	ConnectMongoDB()
 
 	// Jalankan migrations (opsional - bisa di-comment jika sudah dijalankan manual)
 	// if err := RunMigrations(); err != nil {
@@ -19,7 +24,10 @@ func main() {
 	// }
 
 	app := route.NewApp(db)
+
+	// Register routes
 	route.AuthRoute(app)
+	route.AchievementRoute(app)
 
 	port := "4000"
 	log.Printf("Server running on port %s", port)

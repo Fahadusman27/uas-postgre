@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type AchievementReference struct {
+type AchievementReferences struct {
 	ID                 uuid.UUID  `json:"id"`
 	StudentID          uuid.UUID  `json:"student_id"`
 	MongoAchievementID string     `json:"mongo_achievement_id"`

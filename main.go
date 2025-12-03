@@ -1,27 +1,27 @@
 package main
 
 import (
-	. "POSTGRE/Domain/config"
-	"POSTGRE/Domain/route"
+	. "GOLANG/Domain/config"
+	"GOLANG/Domain/route"
 	"log"
 )
 
 func main() {
 	LoadEnv()
-    db := ConnectDB()
-    if err := db.Ping(); err != nil {
-        log.Fatal("Koneksi database gagal: ", err)
-    }
+	db := ConnectDB()
+	if err := db.Ping(); err != nil {
+		log.Fatal("Koneksi database gagal: ", err)
+	}
 
+	// Jalankan migrations (opsional - bisa di-comment jika sudah dijalankan manual)
+	// if err := RunMigrations(); err != nil {
+	// 	log.Fatal("Migration gagal: ", err)
+	// }
 
-	// userRepo := repository.NewUserRepository(db)
-    app := route.NewApp(db)
-	// routes.AuthRoutes(app, userRepo)
-	// routes.Alumni(app, &userRepo)
-	// routes.PekerjaanAlumni(app, &userRepo)
-	// routes.UserRoutes(app)
+	app := route.NewApp(db)
+	route.AuthRoute(app)
 
 	port := "4000"
-
-    log.Fatal(app.Listen(":" + port))
+	log.Printf("Server running on port %s", port)
+	log.Fatal(app.Listen(":" + port))
 }

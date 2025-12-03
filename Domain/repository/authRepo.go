@@ -1,69 +1,91 @@
 package repository
 
 import (
-	"POSTGRE/Domain/model"
+	"GOLANG/Domain/config"
+	model "GOLANG/Domain/model/Postgresql"
 	"database/sql"
 	"errors"
-	"time"
 
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 )
 
-type UserRepository struct {
-	DB        *sql.DB
-	JWTSecret string
-}
-
-func (r *UserRepository) Login(req model.Login) (string, error) {
+func GetUserByEmail(email string) (*model.Users, error) {
 	var user model.Users
-
 	query := `
-		SELECT id, username, password_hash, role_id, is_active 
+		SELECT id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
 		FROM users 
-		WHERE username = $1
+		WHERE email = $1
 	`
-
-	err := r.DB.QueryRow(query, req.Username).Scan(
+	err := config.DB.QueryRow(query, email).Scan(
 		&user.ID,
 		&user.Username,
+		&user.Email,
 		&user.PasswordHash,
+		&user.FullName,
 		&user.RoleID,
-		&user.ISActive,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", errors.New("username salah")
+			return nil, errors.New("user tidak ditemukan")
 		}
-		return "", err
+		return nil, err
 	}
-
-	if !user.ISActive {
-		return "", errors.New("akun anda dinonaktifkan")
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.PasswordHash))
-	if err != nil {
-		return "", errors.New("password salah")
-	}
-
-	token, err := r.generateJWT(user)
-	if err != nil {
-		return "", err
-	}
-
-	return token, nil
+	return &user, nil
 }
 
-func (r *UserRepository) generateJWT(user model.Users) (string, error) {
-	claims := jwt.MapClaims{
-		"user_id":  user.ID.String(),
-		"username": user.Username,
-		"role_id":  user.RoleID.String(),
-		"exp":      time.Now().Add(72 * time.Hour).Unix(),
+func GetUserByUsername(username string) (*model.Users, error) {
+	var user model.Users
+	query := `
+		SELECT id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
+		FROM users 
+		WHERE username = $1
+	`
+	err := config.DB.QueryRow(query, username).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.FullName,
+		&user.RoleID,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user tidak ditemukan")
+		}
+		return nil, err
 	}
+	return &user, nil
+}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token.SignedString([]byte(r.JWTSecret))
+func GetUserByID(userID uuid.UUID) (*model.Users, error) {
+	var user model.Users
+	query := `
+		SELECT id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
+		FROM users 
+		WHERE id = $1
+	`
+	err := config.DB.QueryRow(query, userID).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Email,
+		&user.PasswordHash,
+		&user.FullName,
+		&user.RoleID,
+		&user.IsActive,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("user tidak ditemukan")
+		}
+		return nil, err
+	}
+	return &user, nil
 }

@@ -13,16 +13,15 @@ type Users struct {
 	PasswordHash string    `json:"-"`
 	FullName     string    `json:"full_name"`
 	RoleID       uuid.UUID `json:"role_id"`
-	ISActive     bool      `json:"is_active"`
-	Created_at   time.Time `json:"created_at"`
-	Updated_at   time.Time `json:"update_at"`
+	IsActive     bool      `json:"is_active"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type Login struct {
-	Users
-	Username     string `json:"username"`
-	Email        string `json:"email"`
-	PasswordHash string `json:"Password_Hash"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"Password"`
 }
 
 type LoginRequest struct {

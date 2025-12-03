@@ -26,8 +26,9 @@ func main() {
 	app := route.NewApp(db)
 
 	// Register routes
-	route.AuthRoute(app)
-	route.AchievementRoute(app)
+	route.AuthRoute(app)        // 5.1 Authentication
+	route.UserRoute(app)         // 5.2 Users (Admin)
+	route.AchievementRoute(app)  // 5.4 Achievements
 
 	port := "4000"
 	log.Printf("Server running on port %s", port)

@@ -7,52 +7,70 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AchievementRoute(app *fiber.App) {
-	achievements := app.Group("/achievements")
+// AchievementRoute - 5.4 Achievements
+func AchievementRoute(API *fiber.App) {
+	achievements := API.Group("/api/v1/achievements")
 
 	// Semua endpoint butuh JWT authentication
 	achievements.Use(middleware.JWTAuth())
 
-	// POST /achievements - Submit prestasi (FR-003)
-	// Actor: Mahasiswa
+	// GET /api/v1/achievements - List achievements (filtered by role)
+	// Permission: read_achievements atau verify_achievements
+	// achievements.Get("/",
+	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
+	// 	service.GetAchievementsService)
+
+	// GET /api/v1/achievements/:id - Detail achievement
+	// Permission: read_achievements atau verify_achievements
+	// achievements.Get("/:id",
+	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
+	// 	service.GetAchievementDetailService)
+
+	// POST /api/v1/achievements - Create achievement (Mahasiswa)
 	// Permission: write_achievements
 	achievements.Post("/",
 		middleware.RequirePermission("write_achievements"),
 		service.SubmitAchievementService)
 
-	// Endpoint lainnya (untuk future implementation)
-	// GET /achievements - List achievements
-	// achievements.Get("/",
-	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
-	// 	service.GetAchievementsService)
-
-	// GET /achievements/:id - Detail achievement
-	// achievements.Get("/:id",
-	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
-	// 	service.GetAchievementDetailService)
-
-	// PUT /achievements/:id - Update achievement (mahasiswa only)
+	// PUT /api/v1/achievements/:id - Update achievement (Mahasiswa)
+	// Permission: write_achievements
 	// achievements.Put("/:id",
 	// 	middleware.RequirePermission("write_achievements"),
 	// 	service.UpdateAchievementService)
 
-	// DELETE /achievements/:id - Delete achievement (mahasiswa only)
+	// DELETE /api/v1/achievements/:id - Delete achievement (Mahasiswa)
+	// Permission: write_achievements
 	// achievements.Delete("/:id",
 	// 	middleware.RequirePermission("write_achievements"),
 	// 	service.DeleteAchievementService)
 
-	// PUT /achievements/:id/submit - Submit untuk verifikasi
-	// achievements.Put("/:id/submit",
+	// POST /api/v1/achievements/:id/submit - Submit for verification
+	// Permission: write_achievements
+	// achievements.Post("/:id/submit",
 	// 	middleware.RequirePermission("write_achievements"),
 	// 	service.SubmitForVerificationService)
 
-	// PUT /achievements/:id/verify - Verify achievement (dosen/admin only)
-	// achievements.Put("/:id/verify",
+	// POST /api/v1/achievements/:id/verify - Verify achievement (Dosen Wali)
+	// Permission: verify_achievements
+	// achievements.Post("/:id/verify",
 	// 	middleware.RequirePermission("verify_achievements"),
 	// 	service.VerifyAchievementService)
 
-	// PUT /achievements/:id/reject - Reject achievement (dosen/admin only)
-	// achievements.Put("/:id/reject",
+	// POST /api/v1/achievements/:id/reject - Reject achievement (Dosen Wali)
+	// Permission: verify_achievements
+	// achievements.Post("/:id/reject",
 	// 	middleware.RequirePermission("verify_achievements"),
 	// 	service.RejectAchievementService)
+
+	// GET /api/v1/achievements/:id/history - Status history
+	// Permission: read_achievements atau verify_achievements
+	// achievements.Get("/:id/history",
+	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
+	// 	service.GetAchievementHistoryService)
+
+	// POST /api/v1/achievements/:id/attachments - Upload files
+	// Permission: write_achievements
+	// achievements.Post("/:id/attachments",
+	// 	middleware.RequirePermission("write_achievements"),
+	// 	service.UploadAttachmentsService)
 }

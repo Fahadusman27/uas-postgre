@@ -7,15 +7,23 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-func AuthRoute(app *fiber.App) {
-	auth := app.Group("/auth")
+// AuthRoute - 5.1 Authentication
+func AuthRoute(API *fiber.App) {
+	auth := API.Group("/api/v1/auth")
 
 	// Public routes - tidak perlu authentication
+	// POST /api/v1/auth/login
 	auth.Post("/login", service.LoginService)
 
+	// POST /api/v1/auth/refresh (TODO: implement refresh token)
+	// auth.Post("/refresh", service.RefreshTokenService)
+
 	// Protected routes - perlu JWT authentication
-	// Logout hanya perlu JWT valid, tidak perlu permission khusus
+	// POST /api/v1/auth/logout
 	auth.Post("/logout", middleware.JWTAuth(), service.LogoutService)
+
+	// GET /api/v1/auth/profile
+	// auth.Get("/profile", middleware.JWTAuth(), service.GetProfileService)
 }
 
 // Contoh route dengan RBAC (Permission-based)

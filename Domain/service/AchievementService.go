@@ -4,7 +4,6 @@ import (
 	model "GOLANG/Domain/model/Postgresql"
 	mongodb "GOLANG/Domain/model/mongoDB"
 	"GOLANG/Domain/repository"
-	"log"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -207,17 +206,7 @@ func SubmitForVerificationService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Flow 3: Create notification untuk dosen wali
-	// Simple implementation: Log saja untuk sekarang
-	log.Printf("Notification: Student %s submitted achievement %s for verification",
-		student.StudentID, achievementID)
-
-	// TODO: Implement proper notification system
-	// - Save to database
-	// - Send email to advisor
-	// - Real-time notification
-
-	// Flow 4: Return updated status
+	// Flow 3: Return updated status
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Achievement berhasil di-submit untuk verifikasi",
 		"data": fiber.Map{
@@ -547,15 +536,6 @@ func VerifyAchievementService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Log notification
-	log.Printf("Achievement %s verified by lecturer %s for student %s",
-		achievementID, lecturer.LecturerID, student.StudentID)
-
-	// TODO: Send notification to student
-	// - Save to database
-	// - Send email
-	// - Real-time notification
-
 	// Flow 5: Return updated status
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Achievement berhasil diverifikasi",
@@ -665,16 +645,7 @@ func RejectAchievementService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Flow 4: Create notification untuk mahasiswa
-	log.Printf("Achievement %s rejected by lecturer %s for student %s. Reason: %s",
-		achievementID, lecturer.LecturerID, student.StudentID, req.RejectionNote)
-
-	// TODO: Implement proper notification system
-	// - Save to database
-	// - Send email to student
-	// - Real-time notification
-
-	// Flow 5: Return updated status
+	// Flow 4: Return updated status
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "Achievement berhasil ditolak",
 		"data": fiber.Map{

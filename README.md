@@ -232,6 +232,100 @@ Response:
 }
 ```
 
+### User Management Endpoints (Admin)
+
+#### FR-009: Create User
+```bash
+POST /api/v1/users
+Authorization: Bearer <token>
+Permission: manage_users
+Content-Type: application/json
+
+{
+  "username": "newuser",
+  "full_name": "New User",
+  "email": "newuser@example.com",
+  "password": "password123",
+  "role_id": "role-uuid"
+}
+```
+
+#### FR-009: List Users
+```bash
+GET /api/v1/users?page=1&limit=10
+Authorization: Bearer <token>
+Permission: manage_users
+```
+
+#### FR-009: Get User Detail
+```bash
+GET /api/v1/users/:id
+Authorization: Bearer <token>
+Permission: manage_users
+```
+
+#### FR-009: Update User
+```bash
+PUT /api/v1/users/:id
+Authorization: Bearer <token>
+Permission: manage_users
+Content-Type: application/json
+
+{
+  "username": "updateduser",
+  "full_name": "Updated Name",
+  "email": "updated@example.com",
+  "password": "newpassword123"
+}
+```
+
+#### FR-009: Delete User
+```bash
+DELETE /api/v1/users/:id
+Authorization: Bearer <token>
+Permission: manage_users
+```
+
+#### FR-009: Assign Role
+```bash
+PUT /api/v1/users/:id/role
+Authorization: Bearer <token>
+Permission: manage_users
+Content-Type: application/json
+
+{
+  "role_id": "role-uuid"
+}
+```
+
+#### FR-009: Set Student Profile
+```bash
+POST /api/v1/users/:id/student
+Authorization: Bearer <token>
+Permission: manage_users
+Content-Type: application/json
+
+{
+  "student_id": "NIM123",
+  "program_study": "Teknik Informatika",
+  "academic_year": "2023/2024",
+  "advisor_id": "lecturer-uuid"
+}
+```
+
+#### FR-009: Set Lecturer Profile
+```bash
+POST /api/v1/users/:id/lecturer
+Authorization: Bearer <token>
+Permission: manage_users
+Content-Type: application/json
+
+{
+  "lecturer_id": "NIDN123",
+  "department": "Fakultas Teknik"
+}
+```
+
 Lihat file `DATABASE_SCHEMA.md` untuk detail skema database lengkap.
 
 ## ⚠️ Important Notes
@@ -277,6 +371,7 @@ mongosh --eval "db.version()"
 - ✅ FR-006: View Prestasi Mahasiswa Bimbingan (Dosen Wali)
 - ✅ FR-007: Verify Prestasi (Dosen Wali)
 - ✅ FR-008: Reject Prestasi (Dosen Wali)
+- ✅ FR-009: Manage Users - CRUD, Assign Role, Set Profile (Admin)
 
 ## 📄 License
 

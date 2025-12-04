@@ -2,50 +2,48 @@ package route
 
 import (
 	"GOLANG/Domain/middleware"
+	"GOLANG/Domain/service"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// UserRoute - 5.2 Users (Admin)
-func UserRoute(app *fiber.App) {
-	API := app.Group("/api/v1")
+// UserRoute - FR-009: Manage Users
+func UserRoute(API *fiber.App) {
+	users := API.Group("/api/v1/users")
 
-	// Semua endpoint users butuh JWT authentication
-	API.Use(middleware.JWTAuth())
+	// Semua endpoint butuh JWT authentication dan permission manage_users
+	users.Use(middleware.JWTAuth())
+	users.Use(middleware.RequirePermission("manage_users"))
 
-	// GET /api/v1/users - List all users
-	// Permission: read_users
-	// users.Get("/",
-	// 	middleware.RequirePermission("read_users"),
-	// 	service.GetAllUsersService)
+	// POST /api/v1/users - Create user
+	users.Post("/",
+		service.CreateUserService)
 
-	// GET /api/v1/users/:id - Get user by ID
-	// Permission: read_users
-	// users.Get("/:id",
-	// 	middleware.RequirePermission("read_users"),
-	// 	service.GetUserByIDService)
+	// GET /api/v1/users - List users dengan pagination
+	users.Get("/",
+		service.GetUsersService)
 
-	// POST /api/v1/users - Create new user
-	// Permission: write_users
-	// users.Post("/",
-	// 	middleware.RequirePermission("write_users"),
-	// 	service.CreateUserService)
+	// GET /api/v1/users/:id - Get user detail
+	users.Get("/:id",
+		service.GetUserDetailService)
 
 	// PUT /api/v1/users/:id - Update user
-	// Permission: write_users
-	// users.Put("/:id",
-	// 	middleware.RequirePermission("write_users"),
-	// 	service.UpdateUserService)
+	users.Put("/:id",
+		service.UpdateUserService)
 
 	// DELETE /api/v1/users/:id - Delete user
-	// Permission: write_users
-	// users.Delete("/:id",
-	// 	middleware.RequirePermission("write_users"),
-	// 	service.DeleteUserService)
+	users.Delete("/:id",
+		service.DeleteUserService)
 
-	// PUT /api/v1/users/:id/role - Update user role
-	// Permission: write_users
-	// users.Put("/:id/role",
-	// 	middleware.RequirePermission("write_users"),
-	// 	service.UpdateUserRoleService)
+	// PUT /api/v1/users/:id/role - Assign role
+	users.Put("/:id/role",
+		service.AssignRoleService)
+
+	// POST /api/v1/users/:id/student - Set student profile
+	users.Post("/:id/student",
+		service.SetStudentProfileService)
+
+	// POST /api/v1/users/:id/lecturer - Set lecturer profile
+	users.Post("/:id/lecturer",
+		service.SetLecturerProfileService)
 }

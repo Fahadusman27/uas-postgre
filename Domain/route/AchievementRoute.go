@@ -40,15 +40,15 @@ func AchievementRoute(API *fiber.App) {
 
 	// DELETE /api/v1/achievements/:id - Delete achievement (Mahasiswa)
 	// Permission: write_achievements
-	// achievements.Delete("/:id",
-	// 	middleware.RequirePermission("write_achievements"),
-	// 	service.DeleteAchievementService)
+	achievements.Delete("/:id",
+		middleware.RequirePermission("write_achievements"),
+		service.DeleteAchievementService)
 
 	// POST /api/v1/achievements/:id/submit - Submit for verification
 	// Permission: write_achievements
-	// achievements.Post("/:id/submit",
-	// 	middleware.RequirePermission("write_achievements"),
-	// 	service.SubmitForVerificationService)
+	achievements.Post("/:id/submit",
+		middleware.RequirePermission("write_achievements"),
+		service.SubmitForVerificationService)
 
 	// POST /api/v1/achievements/:id/verify - Verify achievement (Dosen Wali)
 	// Permission: verify_achievements

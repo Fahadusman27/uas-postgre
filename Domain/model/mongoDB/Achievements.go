@@ -20,6 +20,7 @@ type Achievement struct {
 	Points          int                `bson:"points" json:"points"`
 	CreatedAt       time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt       time.Time          `bson:"updatedAt" json:"updatedAt"`
+	DeletedAt       *time.Time         `bson:"deletedAt,omitempty" json:"deletedAt,omitempty"`
 }
 
 type AchievementDetails struct {

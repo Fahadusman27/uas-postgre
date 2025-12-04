@@ -4,9 +4,12 @@ import (
 	model "GOLANG/Domain/model/Postgresql"
 	mongodb "GOLANG/Domain/model/mongoDB"
 	"GOLANG/Domain/repository"
+	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // SubmitAchievementRequest DTO untuk request submit prestasi
@@ -135,6 +138,172 @@ func SubmitAchievementService(c *fiber.Ctx) error {
 			"status":         reference.Status,
 			"student_id":     student.ID,
 			"achievement":    savedAchievement,
+		},
+	})
+}
+
+// SubmitForVerificationService - FR-004: Submit untuk Verifikasi
+func SubmitForVerificationService(c *fiber.Ctx) error {
+	// Flow 1: Mahasiswa submit prestasi
+	achievementID := c.Params("id")
+
+	// Validasi achievement ID
+	_, err := primitive.ObjectIDFromHex(achievementID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid achievement ID",
+		})
+	}
+
+	// Get user_id dari JWT context
+	userID := c.Locals("id").(string)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Cek apakah user adalah mahasiswa
+	student, err := repository.GetStudentByUserID(userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "User bukan mahasiswa",
+		})
+	}
+
+	// Ambil achievement reference dari PostgreSQL
+	reference, err := repository.GetAchievementReferenceByMongoID(achievementID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Achievement tidak ditemukan",
+		})
+	}
+
+	// Validasi: Cek apakah user adalah pemilik achievement
+	if reference.StudentID != student.ID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Anda tidak memiliki akses ke achievement ini",
+		})
+	}
+
+	// Precondition: Cek apakah status masih 'draft'
+	if reference.Status != "draft" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":          "Achievement hanya bisa di-submit jika berstatus draft",
+			"current_status": reference.Status,
+		})
+	}
+
+	// Flow 2: Update status menjadi 'submitted'
+	now := time.Now()
+	reference.Status = "submitted"
+	reference.SubmittedAt = &now
+
+	err = repository.UpdateAchievementReference(reference)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal update status achievement",
+		})
+	}
+
+	// Flow 3: Create notification untuk dosen wali
+	// Simple implementation: Log saja untuk sekarang
+	log.Printf("Notification: Student %s submitted achievement %s for verification",
+		student.StudentID, achievementID)
+
+	// TODO: Implement proper notification system
+	// - Save to database
+	// - Send email to advisor
+	// - Real-time notification
+
+	// Flow 4: Return updated status
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Achievement berhasil di-submit untuk verifikasi",
+		"data": fiber.Map{
+			"achievement_id": achievementID,
+			"reference_id":   reference.ID,
+			"status":         reference.Status,
+			"submitted_at":   reference.SubmittedAt,
+		},
+	})
+}
+
+// DeleteAchievementService - FR-005: Hapus Prestasi
+func DeleteAchievementService(c *fiber.Ctx) error {
+	// Get achievement_id dari URL parameter
+	achievementID := c.Params("id")
+
+	// Validasi achievement ID
+	objectID, err := primitive.ObjectIDFromHex(achievementID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid achievement ID",
+		})
+	}
+
+	// Get user_id dari JWT context
+	userID := c.Locals("id").(string)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Cek apakah user adalah mahasiswa
+	student, err := repository.GetStudentByUserID(userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "User bukan mahasiswa",
+		})
+	}
+
+	// Ambil achievement reference dari PostgreSQL
+	reference, err := repository.GetAchievementReferenceByMongoID(achievementID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Achievement tidak ditemukan",
+		})
+	}
+
+	// Validasi: Cek apakah user adalah pemilik achievement
+	if reference.StudentID != student.ID {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Anda tidak memiliki akses ke achievement ini",
+		})
+	}
+
+	// Precondition: Cek apakah status masih 'draft'
+	if reference.Status != "draft" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":          "Hanya achievement dengan status draft yang bisa dihapus",
+			"current_status": reference.Status,
+		})
+	}
+
+	// Flow 1: Soft delete data di MongoDB
+	err = repository.SoftDeleteAchievement(objectID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal menghapus achievement",
+		})
+	}
+
+	// Flow 2: Delete reference di PostgreSQL
+	err = repository.DeleteAchievementReference(reference.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal update reference",
+		})
+	}
+
+	// Flow 3: Return success message
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Achievement berhasil dihapus",
+		"data": fiber.Map{
+			"achievement_id": achievementID,
+			"reference_id":   reference.ID,
 		},
 	})
 }

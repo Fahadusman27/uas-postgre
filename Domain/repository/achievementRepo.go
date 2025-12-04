@@ -68,7 +68,7 @@ func UpdateAchievement(id primitive.ObjectID, achievement *mongodb.Achievement) 
 	return err
 }
 
-// DeleteAchievement menghapus achievement dari MongoDB
+// DeleteAchievement menghapus achievement dari MongoDB (hard delete)
 func DeleteAchievement(id primitive.ObjectID) error {
 	collection := config.GetMongoDB().Collection("achievements")
 
@@ -76,5 +76,28 @@ func DeleteAchievement(id primitive.ObjectID) error {
 	defer cancel()
 
 	_, err := collection.DeleteOne(ctx, bson.M{"_id": id})
+	return err
+}
+
+// SoftDeleteAchievement melakukan soft delete achievement di MongoDB
+func SoftDeleteAchievement(id primitive.ObjectID) error {
+	collection := config.GetMongoDB().Collection("achievements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	now := time.Now()
+
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{
+			"$set": bson.M{
+				"deletedAt": now,
+				"updatedAt": now,
+			},
+		},
+	)
+
 	return err
 }

@@ -14,6 +14,13 @@ func AchievementRoute(API *fiber.App) {
 	// Semua endpoint butuh JWT authentication
 	achievements.Use(middleware.JWTAuth())
 
+	// GET /api/v1/achievements/advisee - View prestasi mahasiswa bimbingan (Dosen Wali)
+	// Permission: verify_achievements
+	// FR-006: View Prestasi Mahasiswa Bimbingan
+	achievements.Get("/advisee",
+		middleware.RequirePermission("verify_achievements"),
+		service.GetAdviseeAchievementsService)
+
 	// GET /api/v1/achievements - List achievements (filtered by role)
 	// Permission: read_achievements atau verify_achievements
 	// achievements.Get("/",
@@ -52,15 +59,17 @@ func AchievementRoute(API *fiber.App) {
 
 	// POST /api/v1/achievements/:id/verify - Verify achievement (Dosen Wali)
 	// Permission: verify_achievements
-	// achievements.Post("/:id/verify",
-	// 	middleware.RequirePermission("verify_achievements"),
-	// 	service.VerifyAchievementService)
+	// FR-007: Verify Prestasi
+	achievements.Post("/:id/verify",
+		middleware.RequirePermission("verify_achievements"),
+		service.VerifyAchievementService)
 
 	// POST /api/v1/achievements/:id/reject - Reject achievement (Dosen Wali)
 	// Permission: verify_achievements
-	// achievements.Post("/:id/reject",
-	// 	middleware.RequirePermission("verify_achievements"),
-	// 	service.RejectAchievementService)
+	// FR-008: Reject Prestasi
+	achievements.Post("/:id/reject",
+		middleware.RequirePermission("verify_achievements"),
+		service.RejectAchievementService)
 
 	// GET /api/v1/achievements/:id/history - Status history
 	// Permission: read_achievements atau verify_achievements

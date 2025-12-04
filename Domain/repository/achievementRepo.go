@@ -101,3 +101,40 @@ func SoftDeleteAchievement(id primitive.ObjectID) error {
 
 	return err
 }
+
+// GetAchievementsByMongoIDs mengambil multiple achievements berdasarkan array of MongoDB IDs
+func GetAchievementsByMongoIDs(mongoIDs []string) ([]mongodb.Achievement, error) {
+	collection := config.GetMongoDB().Collection("achievements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Convert string IDs to ObjectIDs
+	objectIDs := make([]primitive.ObjectID, 0, len(mongoIDs))
+	for _, id := range mongoIDs {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			continue // Skip invalid IDs
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+
+	// Query dengan $in operator
+	filter := bson.M{
+		"_id":       bson.M{"$in": objectIDs},
+		"deletedAt": bson.M{"$exists": false}, // Exclude soft deleted
+	}
+
+	cursor, err := collection.Find(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	var achievements []mongodb.Achievement
+	if err = cursor.All(ctx, &achievements); err != nil {
+		return nil, err
+	}
+
+	return achievements, nil
+}

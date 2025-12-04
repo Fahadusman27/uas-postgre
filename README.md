@@ -119,6 +119,119 @@ Authorization: Bearer <token>
 
 ## 📝 API Documentation
 
+### Achievement Endpoints
+
+#### FR-003: Submit Prestasi
+```bash
+POST /api/v1/achievements
+Authorization: Bearer <token>
+Permission: write_achievements
+
+{
+  "achievementType": "competition",
+  "title": "Juara 1 Hackathon",
+  "description": "Deskripsi prestasi",
+  "details": { ... },
+  "attachments": [],
+  "tags": ["hackathon", "programming"]
+}
+```
+
+#### FR-004: Submit untuk Verifikasi
+```bash
+POST /api/v1/achievements/:id/submit
+Authorization: Bearer <token>
+Permission: write_achievements
+```
+
+#### FR-005: Hapus Prestasi
+```bash
+DELETE /api/v1/achievements/:id
+Authorization: Bearer <token>
+Permission: write_achievements
+```
+
+#### FR-006: View Prestasi Mahasiswa Bimbingan (Dosen Wali)
+```bash
+GET /api/v1/achievements/advisee?page=1&limit=10
+Authorization: Bearer <token>
+Permission: verify_achievements
+```
+
+Response:
+```json
+{
+  "message": "Berhasil mengambil data prestasi mahasiswa bimbingan",
+  "data": {
+    "achievements": [
+      {
+        "reference_id": "uuid",
+        "achievement_id": "mongo_id",
+        "student_id": "NIM123",
+        "program_study": "Teknik Informatika",
+        "status": "submitted",
+        "submitted_at": "2024-12-04T10:00:00Z",
+        "achievement": { ... }
+      }
+    ],
+    "pagination": {
+      "total": 25,
+      "page": 1,
+      "limit": 10,
+      "total_pages": 3
+    }
+  }
+}
+```
+
+#### FR-007: Verify Prestasi (Dosen Wali)
+```bash
+POST /api/v1/achievements/:id/verify
+Authorization: Bearer <token>
+Permission: verify_achievements
+```
+
+Response:
+```json
+{
+  "message": "Achievement berhasil diverifikasi",
+  "data": {
+    "achievement_id": "mongo_id",
+    "reference_id": "uuid",
+    "status": "verified",
+    "verified_at": "2024-12-04T10:30:00Z",
+    "verified_by": "lecturer_uuid",
+    "student_id": "NIM123"
+  }
+}
+```
+
+#### FR-008: Reject Prestasi (Dosen Wali)
+```bash
+POST /api/v1/achievements/:id/reject
+Authorization: Bearer <token>
+Permission: verify_achievements
+Content-Type: application/json
+
+{
+  "rejection_note": "Dokumen pendukung tidak lengkap"
+}
+```
+
+Response:
+```json
+{
+  "message": "Achievement berhasil ditolak",
+  "data": {
+    "achievement_id": "mongo_id",
+    "reference_id": "uuid",
+    "status": "rejected",
+    "rejection_note": "Dokumen pendukung tidak lengkap",
+    "student_id": "NIM123"
+  }
+}
+```
+
 Lihat file `DATABASE_SCHEMA.md` untuk detail skema database lengkap.
 
 ## ⚠️ Important Notes
@@ -158,6 +271,12 @@ mongosh --eval "db.version()"
 - ✅ User Management
 - ✅ Achievement Management (PostgreSQL + MongoDB)
 - ✅ Flexible Achievement Schema (MongoDB)
+- ✅ FR-003: Submit Prestasi (Mahasiswa)
+- ✅ FR-004: Submit untuk Verifikasi (Mahasiswa)
+- ✅ FR-005: Hapus Prestasi (Mahasiswa)
+- ✅ FR-006: View Prestasi Mahasiswa Bimbingan (Dosen Wali)
+- ✅ FR-007: Verify Prestasi (Dosen Wali)
+- ✅ FR-008: Reject Prestasi (Dosen Wali)
 
 ## 📄 License
 

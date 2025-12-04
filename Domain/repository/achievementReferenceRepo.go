@@ -5,6 +5,7 @@ import (
 	model "GOLANG/Domain/model/Postgresql"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -147,4 +148,70 @@ func DeleteAchievementReference(id uuid.UUID) error {
 	query := `DELETE FROM achievement_references WHERE id = $1`
 	_, err := config.DB.Exec(query, id)
 	return err
+}
+
+// GetAchievementReferencesByStudentIDs mengambil references berdasarkan list student IDs dengan pagination
+func GetAchievementReferencesByStudentIDs(studentIDs []uuid.UUID, limit, offset int) ([]model.AchievementReferences, int, error) {
+	var references []model.AchievementReferences
+
+	// Build query with ANY clause untuk array
+	query := `
+		SELECT id, student_id, mongo_achievement_id, status, 
+		       submitted_at, verified_at, verified_by, rejection_note,
+		       created_at, updated_at
+		FROM achievement_references
+		WHERE student_id = ANY($1)
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	// Convert []uuid.UUID to []string for pq.Array
+	studentIDStrings := make([]string, len(studentIDs))
+	for i, id := range studentIDs {
+		studentIDStrings[i] = id.String()
+	}
+
+	rows, err := config.DB.Query(query, "{"+strings.Join(studentIDStrings, ",")+"}", limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ref model.AchievementReferences
+		err := rows.Scan(
+			&ref.ID,
+			&ref.StudentID,
+			&ref.MongoAchievementID,
+			&ref.Status,
+			&ref.SubmittedAt,
+			&ref.VerifiedAt,
+			&ref.VerifiedBy,
+			&ref.RejectionNote,
+			&ref.CreatedAt,
+			&ref.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		references = append(references, ref)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// Get total count
+	var total int
+	countQuery := `
+		SELECT COUNT(*)
+		FROM achievement_references
+		WHERE student_id = ANY($1)
+	`
+	err = config.DB.QueryRow(countQuery, "{"+strings.Join(studentIDStrings, ",")+"}").Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return references, total, nil
 }

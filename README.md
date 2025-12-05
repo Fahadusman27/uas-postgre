@@ -121,6 +121,57 @@ Authorization: Bearer <token>
 
 ### Achievement Endpoints
 
+#### FR-010: View All Achievements (Admin)
+```bash
+GET /api/v1/achievements?page=1&limit=10&status=verified&sort=created_at&order=desc
+Authorization: Bearer <token>
+Permission: read_achievements
+```
+
+Query Parameters:
+- `page` - Halaman (default: 1)
+- `limit` - Jumlah per halaman (default: 10, max: 100)
+- `status` - Filter by status (draft, submitted, verified, rejected)
+- `student_id` - Filter by student UUID
+- `sort` - Sort by field (created_at, submitted_at, verified_at, updated_at)
+- `order` - Sort order (asc, desc)
+
+Response:
+```json
+{
+  "message": "Berhasil mengambil data achievements",
+  "data": {
+    "achievements": [
+      {
+        "reference_id": "uuid",
+        "achievement_id": "mongo_id",
+        "student_id": "NIM123",
+        "program_study": "Teknik Informatika",
+        "status": "verified",
+        "submitted_at": "2024-12-04T10:00:00Z",
+        "verified_at": "2024-12-04T11:00:00Z",
+        "verified_by": "lecturer-uuid",
+        "rejection_note": null,
+        "achievement": { ... },
+        "created_at": "2024-12-03T09:00:00Z"
+      }
+    ],
+    "pagination": {
+      "total": 50,
+      "page": 1,
+      "limit": 10,
+      "total_pages": 5
+    },
+    "filters": {
+      "status": "verified",
+      "student_id": "",
+      "sort": "created_at",
+      "order": "desc"
+    }
+  }
+}
+```
+
 #### FR-003: Submit Prestasi
 ```bash
 POST /api/v1/achievements
@@ -372,6 +423,7 @@ mongosh --eval "db.version()"
 - ✅ FR-007: Verify Prestasi (Dosen Wali)
 - ✅ FR-008: Reject Prestasi (Dosen Wali)
 - ✅ FR-009: Manage Users - CRUD, Assign Role, Set Profile (Admin)
+- ✅ FR-010: View All Achievements - Filters, Sorting, Pagination (Admin)
 
 ## 📄 License
 

@@ -657,3 +657,146 @@ func RejectAchievementService(c *fiber.Ctx) error {
 		},
 	})
 }
+
+// GetAllAchievementsService - FR-010: View All Achievements (Admin)
+func GetAllAchievementsService(c *fiber.Ctx) error {
+	// Parse pagination parameters
+	page := c.QueryInt("page", 1)
+	limit := c.QueryInt("limit", 10)
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	// Parse filter parameters
+	status := c.Query("status", "")
+	studentID := c.Query("student_id", "")
+	sortBy := c.Query("sort", "created_at")
+	order := c.Query("order", "desc")
+
+	// Flow 1: Get all achievement references dengan filters
+	references, total, err := repository.GetAllAchievementReferencesWithFilters(limit, offset, status, studentID, sortBy, order)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data achievement references",
+		})
+	}
+
+	// Jika tidak ada achievements
+	if len(references) == 0 {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Tidak ada prestasi",
+			"data": fiber.Map{
+				"achievements": []interface{}{},
+				"pagination": fiber.Map{
+					"total":       total,
+					"page":        page,
+					"limit":       limit,
+					"total_pages": 0,
+				},
+			},
+		})
+	}
+
+	// Extract mongo achievement IDs
+	mongoIDs := make([]string, len(references))
+	studentIDs := make(map[uuid.UUID]bool)
+	for i, ref := range references {
+		mongoIDs[i] = ref.MongoAchievementID
+		studentIDs[ref.StudentID] = true
+	}
+
+	// Flow 2: Fetch details dari MongoDB
+	achievements, err := repository.GetAchievementsByMongoIDs(mongoIDs)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil detail achievements dari MongoDB",
+		})
+	}
+
+	// Create map untuk lookup achievement by mongo ID
+	achievementMap := make(map[string]*mongodb.Achievement)
+	for i := range achievements {
+		achievementMap[achievements[i].ID.Hex()] = &achievements[i]
+	}
+
+	// Get student data
+	studentIDList := make([]uuid.UUID, 0, len(studentIDs))
+	for id := range studentIDs {
+		studentIDList = append(studentIDList, id)
+	}
+
+	studentMap := make(map[uuid.UUID]*model.Students)
+	for _, id := range studentIDList {
+		student, err := repository.GetStudentByID(id)
+		if err == nil {
+			studentMap[id] = student
+		}
+	}
+
+	// Flow 3: Combine data dan return dengan pagination
+	type AchievementResponse struct {
+		ReferenceID   uuid.UUID            `json:"reference_id"`
+		AchievementID string               `json:"achievement_id"`
+		StudentID     string               `json:"student_id"`
+		ProgramStudy  string               `json:"program_study"`
+		Status        string               `json:"status"`
+		SubmittedAt   *time.Time           `json:"submitted_at"`
+		VerifiedAt    *time.Time           `json:"verified_at"`
+		VerifiedBy    *uuid.UUID           `json:"verified_by"`
+		RejectionNote *string              `json:"rejection_note"`
+		Achievement   *mongodb.Achievement `json:"achievement"`
+		CreatedAt     time.Time            `json:"created_at"`
+	}
+
+	results := make([]AchievementResponse, 0, len(references))
+	for _, ref := range references {
+		achievement := achievementMap[ref.MongoAchievementID]
+		student := studentMap[ref.StudentID]
+
+		response := AchievementResponse{
+			ReferenceID:   ref.ID,
+			AchievementID: ref.MongoAchievementID,
+			Status:        ref.Status,
+			SubmittedAt:   ref.SubmittedAt,
+			VerifiedAt:    ref.VerifiedAt,
+			VerifiedBy:    ref.VerifiedBy,
+			RejectionNote: ref.RejectionNote,
+			Achievement:   achievement,
+			CreatedAt:     ref.CreatedAt,
+		}
+
+		if student != nil {
+			response.StudentID = student.StudentID
+			response.ProgramStudy = student.ProgramStudy
+		}
+
+		results = append(results, response)
+	}
+
+	// Calculate total pages
+	totalPages := (total + limit - 1) / limit
+
+	// Flow 4: Return dengan pagination
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Berhasil mengambil data achievements",
+		"data": fiber.Map{
+			"achievements": results,
+			"pagination": fiber.Map{
+				"total":       total,
+				"page":        page,
+				"limit":       limit,
+				"total_pages": totalPages,
+			},
+			"filters": fiber.Map{
+				"status":     status,
+				"student_id": studentID,
+				"sort":       sortBy,
+				"order":      order,
+			},
+		},
+	})
+}

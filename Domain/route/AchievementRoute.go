@@ -21,11 +21,12 @@ func AchievementRoute(API *fiber.App) {
 		middleware.RequirePermission("verify_achievements"),
 		service.GetAdviseeAchievementsService)
 
-	// GET /api/v1/achievements - List achievements (filtered by role)
-	// Permission: read_achievements atau verify_achievements
-	// achievements.Get("/",
-	// 	middleware.RequireAnyPermission("read_achievements", "verify_achievements"),
-	// 	service.GetAchievementsService)
+	// GET /api/v1/achievements - List all achievements (Admin)
+	// Permission: read_achievements
+	// FR-010: View All Achievements
+	achievements.Get("/",
+		middleware.RequirePermission("read_achievements"),
+		service.GetAllAchievementsService)
 
 	// GET /api/v1/achievements/:id - Detail achievement
 	// Permission: read_achievements atau verify_achievements

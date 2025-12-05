@@ -215,3 +215,170 @@ func GetAchievementReferencesByStudentIDs(studentIDs []uuid.UUID, limit, offset 
 
 	return references, total, nil
 }
+
+func GetAllAchievementReferences(StudentID uuid.UUID) ([]model.AchievementReferences, error) {
+	query := `
+        SELECT 
+            id, 
+            student_id, 
+            mongo_achievement_id, 
+            status, 
+            submitted_at, 
+            verified_at, 
+            verified_by, 
+            rejection_note, 
+            created_at, 
+            updated_at 
+        FROM achievement_references 
+        WHERE student_id = $1`
+
+	// 2. Gunakan Query (bukan Exec)
+	rows, err := config.DB.Query(query, StudentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var references []model.AchievementReferences
+
+	// 3. Loop setiap baris data
+	for rows.Next() {
+		var ref model.AchievementReferences
+
+		// 4. Scan data ke variable struct
+		// PERHATIAN: Urutan Scan harus SAMA PERSIS dengan urutan kolom di SELECT
+		err := rows.Scan(
+			&ref.ID,
+			&ref.StudentID,
+			&ref.MongoAchievementID,
+			&ref.Status,
+			&ref.SubmittedAt,   // Pointer otomatis menangani NULL
+			&ref.VerifiedAt,    // Pointer otomatis menangani NULL
+			&ref.VerifiedBy,    // Pointer otomatis menangani NULL
+			&ref.RejectionNote, // Pointer otomatis menangani NULL
+			&ref.CreatedAt,
+			&ref.UpdatedAt,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		references = append(references, ref)
+	}
+
+	// Cek error setelah iterasi selesai
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return references, nil
+}
+
+// GetAllAchievementReferencesWithFilters mengambil semua achievement references dengan filters dan pagination
+func GetAllAchievementReferencesWithFilters(limit, offset int, status, studentID, sortBy, order string) ([]model.AchievementReferences, int, error) {
+	var references []model.AchievementReferences
+
+	// Build query dengan filters
+	query := `
+		SELECT id, student_id, mongo_achievement_id, status, 
+		       submitted_at, verified_at, verified_by, rejection_note,
+		       created_at, updated_at
+		FROM achievement_references
+		WHERE 1=1
+	`
+
+	// Count query
+	countQuery := `SELECT COUNT(*) FROM achievement_references WHERE 1=1`
+
+	// Build WHERE clause
+	var args []interface{}
+	argIndex := 1
+
+	// Filter by status
+	if status != "" {
+		query += " AND status = $" + string(rune(argIndex+'0'))
+		countQuery += " AND status = $1"
+		args = append(args, status)
+		argIndex++
+	}
+
+	// Filter by student_id
+	if studentID != "" {
+		studentUUID, err := uuid.Parse(studentID)
+		if err == nil {
+			placeholder := "$" + string(rune(argIndex+'0'))
+			query += " AND student_id = " + placeholder
+			if len(args) == 0 {
+				countQuery += " AND student_id = $1"
+			} else {
+				countQuery += " AND student_id = $2"
+			}
+			args = append(args, studentUUID)
+			argIndex++
+		}
+	}
+
+	// Sorting
+	validSortFields := map[string]bool{
+		"created_at":   true,
+		"submitted_at": true,
+		"verified_at":  true,
+		"updated_at":   true,
+	}
+
+	if sortBy == "" || !validSortFields[sortBy] {
+		sortBy = "created_at"
+	}
+
+	if order != "asc" && order != "desc" {
+		order = "desc"
+	}
+
+	query += " ORDER BY " + sortBy + " " + order
+
+	// Pagination
+	query += " LIMIT $" + string(rune(argIndex+'0')) + " OFFSET $" + string(rune(argIndex+'1'))
+	args = append(args, limit, offset)
+
+	// Execute query
+	rows, err := config.DB.Query(query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var ref model.AchievementReferences
+		err := rows.Scan(
+			&ref.ID,
+			&ref.StudentID,
+			&ref.MongoAchievementID,
+			&ref.Status,
+			&ref.SubmittedAt,
+			&ref.VerifiedAt,
+			&ref.VerifiedBy,
+			&ref.RejectionNote,
+			&ref.CreatedAt,
+			&ref.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, err
+		}
+		references = append(references, ref)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// Get total count
+	var total int
+	countArgs := args[:len(args)-2] // Remove limit and offset
+	err = config.DB.QueryRow(countQuery, countArgs...).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return references, total, nil
+}

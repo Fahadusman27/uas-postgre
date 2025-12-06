@@ -800,3 +800,271 @@ func GetAllAchievementsService(c *fiber.Ctx) error {
 		},
 	})
 }
+
+// GetMyAchievementStatsService - FR-011: Achievement Statistics (Mahasiswa - Own)
+func GetMyAchievementStatsService(c *fiber.Ctx) error {
+	// Get user_id dari JWT context
+	userID := c.Locals("id").(string)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Cek apakah user adalah mahasiswa
+	student, err := repository.GetStudentByUserID(userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "User bukan mahasiswa",
+		})
+	}
+
+	// Get all achievement references untuk student ini
+	references, err := repository.GetAllAchievementReferences(student.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data achievements",
+		})
+	}
+
+	if len(references) == 0 {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Belum ada prestasi",
+			"data": fiber.Map{
+				"total":                          0,
+				"by_type":                        map[string]int{},
+				"by_period":                      map[string]int{},
+				"by_status":                      map[string]int{},
+				"competition_level_distribution": map[string]int{},
+			},
+		})
+	}
+
+	// Extract mongo IDs
+	mongoIDs := make([]string, len(references))
+	for i, ref := range references {
+		mongoIDs[i] = ref.MongoAchievementID
+	}
+
+	// Get statistics
+	statsByType, _ := repository.GetAchievementStatsByType(mongoIDs)
+	statsByPeriod, _ := repository.GetAchievementStatsByPeriod(mongoIDs)
+	competitionLevelDist, _ := repository.GetCompetitionLevelDistribution(mongoIDs)
+
+	// Count by status
+	statsByStatus := make(map[string]int)
+	for _, ref := range references {
+		statsByStatus[ref.Status]++
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Berhasil mengambil statistik prestasi",
+		"data": fiber.Map{
+			"total":                          len(references),
+			"by_type":                        statsByType,
+			"by_period":                      statsByPeriod,
+			"by_status":                      statsByStatus,
+			"competition_level_distribution": competitionLevelDist,
+		},
+	})
+}
+
+// GetAdviseeAchievementStatsService - FR-011: Achievement Statistics (Dosen Wali - Advisee)
+func GetAdviseeAchievementStatsService(c *fiber.Ctx) error {
+	// Get user_id dari JWT context
+	userID := c.Locals("id").(string)
+	userUUID, err := uuid.Parse(userID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid user ID",
+		})
+	}
+
+	// Cek apakah user adalah dosen
+	lecturer, err := repository.GetLecturerByUserID(userUUID)
+	if err != nil {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "User bukan dosen",
+		})
+	}
+
+	// Get list students
+	students, err := repository.GetStudentsByAdvisorID(lecturer.ID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data mahasiswa bimbingan",
+		})
+	}
+
+	if len(students) == 0 {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Tidak ada mahasiswa bimbingan",
+			"data": fiber.Map{
+				"total":                          0,
+				"by_type":                        map[string]int{},
+				"by_period":                      map[string]int{},
+				"by_status":                      map[string]int{},
+				"competition_level_distribution": map[string]int{},
+				"top_students":                   []interface{}{},
+			},
+		})
+	}
+
+	// Extract student IDs
+	studentIDs := make([]uuid.UUID, len(students))
+	for i, student := range students {
+		studentIDs[i] = student.ID
+	}
+
+	// Get all achievement references
+	references, total, err := repository.GetAchievementReferencesByStudentIDs(studentIDs, 10000, 0)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data achievements",
+		})
+	}
+
+	if len(references) == 0 {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Belum ada prestasi mahasiswa bimbingan",
+			"data": fiber.Map{
+				"total":                          0,
+				"by_type":                        map[string]int{},
+				"by_period":                      map[string]int{},
+				"by_status":                      map[string]int{},
+				"competition_level_distribution": map[string]int{},
+				"top_students":                   []interface{}{},
+			},
+		})
+	}
+
+	// Extract mongo IDs
+	mongoIDs := make([]string, len(references))
+	for i, ref := range references {
+		mongoIDs[i] = ref.MongoAchievementID
+	}
+
+	// Get statistics
+	statsByType, _ := repository.GetAchievementStatsByType(mongoIDs)
+	statsByPeriod, _ := repository.GetAchievementStatsByPeriod(mongoIDs)
+	competitionLevelDist, _ := repository.GetCompetitionLevelDistribution(mongoIDs)
+	statsByStatus, _ := repository.GetAchievementCountByStatus(studentIDs)
+
+	// Get top students
+	topStudents, _ := repository.GetTopStudentsByAchievementCount(studentIDs, 10, "verified")
+
+	// Create student map for lookup
+	studentMap := make(map[uuid.UUID]*model.Students)
+	for i := range students {
+		studentMap[students[i].ID] = &students[i]
+	}
+
+	// Format top students
+	type TopStudentResponse struct {
+		StudentID    string `json:"student_id"`
+		ProgramStudy string `json:"program_study"`
+		Count        int    `json:"count"`
+	}
+
+	topStudentsResponse := make([]TopStudentResponse, 0, len(topStudents))
+	for _, ts := range topStudents {
+		if student, ok := studentMap[ts.StudentID]; ok {
+			topStudentsResponse = append(topStudentsResponse, TopStudentResponse{
+				StudentID:    student.StudentID,
+				ProgramStudy: student.ProgramStudy,
+				Count:        ts.Count,
+			})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Berhasil mengambil statistik prestasi mahasiswa bimbingan",
+		"data": fiber.Map{
+			"total":                          total,
+			"by_type":                        statsByType,
+			"by_period":                      statsByPeriod,
+			"by_status":                      statsByStatus,
+			"competition_level_distribution": competitionLevelDist,
+			"top_students":                   topStudentsResponse,
+		},
+	})
+}
+
+// GetAllAchievementStatsService - FR-011: Achievement Statistics (Admin - All)
+func GetAllAchievementStatsService(c *fiber.Ctx) error {
+	// Get all achievement references (no filter)
+	references, total, err := repository.GetAllAchievementReferencesWithFilters(100000, 0, "", "", "created_at", "desc")
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Gagal mengambil data achievements",
+		})
+	}
+
+	if len(references) == 0 {
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Belum ada prestasi",
+			"data": fiber.Map{
+				"total":                          0,
+				"by_type":                        map[string]int{},
+				"by_period":                      map[string]int{},
+				"by_status":                      map[string]int{},
+				"competition_level_distribution": map[string]int{},
+				"top_students":                   []interface{}{},
+			},
+		})
+	}
+
+	// Extract mongo IDs and student IDs
+	mongoIDs := make([]string, len(references))
+	studentIDMap := make(map[uuid.UUID]bool)
+	for i, ref := range references {
+		mongoIDs[i] = ref.MongoAchievementID
+		studentIDMap[ref.StudentID] = true
+	}
+
+	studentIDs := make([]uuid.UUID, 0, len(studentIDMap))
+	for id := range studentIDMap {
+		studentIDs = append(studentIDs, id)
+	}
+
+	// Get statistics
+	statsByType, _ := repository.GetAchievementStatsByType(mongoIDs)
+	statsByPeriod, _ := repository.GetAchievementStatsByPeriod(mongoIDs)
+	competitionLevelDist, _ := repository.GetCompetitionLevelDistribution(mongoIDs)
+	statsByStatus, _ := repository.GetAchievementCountByStatus(studentIDs)
+
+	// Get top students
+	topStudents, _ := repository.GetTopStudentsByAchievementCount(studentIDs, 10, "verified")
+
+	// Get student data for top students
+	type TopStudentResponse struct {
+		StudentID    string `json:"student_id"`
+		ProgramStudy string `json:"program_study"`
+		Count        int    `json:"count"`
+	}
+
+	topStudentsResponse := make([]TopStudentResponse, 0, len(topStudents))
+	for _, ts := range topStudents {
+		student, err := repository.GetStudentByID(ts.StudentID)
+		if err == nil {
+			topStudentsResponse = append(topStudentsResponse, TopStudentResponse{
+				StudentID:    student.StudentID,
+				ProgramStudy: student.ProgramStudy,
+				Count:        ts.Count,
+			})
+		}
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Berhasil mengambil statistik prestasi",
+		"data": fiber.Map{
+			"total":                          total,
+			"by_type":                        statsByType,
+			"by_period":                      statsByPeriod,
+			"by_status":                      statsByStatus,
+			"competition_level_distribution": competitionLevelDist,
+			"top_students":                   topStudentsResponse,
+		},
+	})
+}

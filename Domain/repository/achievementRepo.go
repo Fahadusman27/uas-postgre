@@ -138,3 +138,180 @@ func GetAchievementsByMongoIDs(mongoIDs []string) ([]mongodb.Achievement, error)
 
 	return achievements, nil
 }
+
+// GetAchievementStatsByType mengambil statistik prestasi per tipe
+func GetAchievementStatsByType(mongoIDs []string) (map[string]int, error) {
+	collection := config.GetMongoDB().Collection("achievements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Convert string IDs to ObjectIDs
+	objectIDs := make([]primitive.ObjectID, 0, len(mongoIDs))
+	for _, id := range mongoIDs {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			continue
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+
+	// Aggregation pipeline
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"_id":       bson.M{"$in": objectIDs},
+				"deletedAt": bson.M{"$exists": false},
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id":   "$achievementType",
+				"count": bson.M{"$sum": 1},
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	stats := make(map[string]int)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID    string `bson:"_id"`
+			Count int    `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err != nil {
+			continue
+		}
+		stats[result.ID] = result.Count
+	}
+
+	return stats, nil
+}
+
+// GetAchievementStatsByPeriod mengambil statistik prestasi per periode (bulan-tahun)
+func GetAchievementStatsByPeriod(mongoIDs []string) (map[string]int, error) {
+	collection := config.GetMongoDB().Collection("achievements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Convert string IDs to ObjectIDs
+	objectIDs := make([]primitive.ObjectID, 0, len(mongoIDs))
+	for _, id := range mongoIDs {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			continue
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+
+	// Aggregation pipeline - group by year-month
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"_id":       bson.M{"$in": objectIDs},
+				"deletedAt": bson.M{"$exists": false},
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id": bson.M{
+					"year":  bson.M{"$year": "$createdAt"},
+					"month": bson.M{"$month": "$createdAt"},
+				},
+				"count": bson.M{"$sum": 1},
+			},
+		},
+		{
+			"$sort": bson.M{"_id.year": -1, "_id.month": -1},
+		},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	stats := make(map[string]int)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID struct {
+				Year  int `bson:"year"`
+				Month int `bson:"month"`
+			} `bson:"_id"`
+			Count int `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err != nil {
+			continue
+		}
+		// Format: "2024-01"
+		period := time.Date(result.ID.Year, time.Month(result.ID.Month), 1, 0, 0, 0, 0, time.UTC).Format("2006-01")
+		stats[period] = result.Count
+	}
+
+	return stats, nil
+}
+
+// GetCompetitionLevelDistribution mengambil distribusi tingkat kompetisi
+func GetCompetitionLevelDistribution(mongoIDs []string) (map[string]int, error) {
+	collection := config.GetMongoDB().Collection("achievements")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Convert string IDs to ObjectIDs
+	objectIDs := make([]primitive.ObjectID, 0, len(mongoIDs))
+	for _, id := range mongoIDs {
+		objectID, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			continue
+		}
+		objectIDs = append(objectIDs, objectID)
+	}
+
+	// Aggregation pipeline - group by competition level
+	pipeline := []bson.M{
+		{
+			"$match": bson.M{
+				"_id":             bson.M{"$in": objectIDs},
+				"deletedAt":       bson.M{"$exists": false},
+				"achievementType": "competition",
+			},
+		},
+		{
+			"$group": bson.M{
+				"_id":   "$details.level",
+				"count": bson.M{"$sum": 1},
+			},
+		},
+	}
+
+	cursor, err := collection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+
+	stats := make(map[string]int)
+	for cursor.Next(ctx) {
+		var result struct {
+			ID    string `bson:"_id"`
+			Count int    `bson:"count"`
+		}
+		if err := cursor.Decode(&result); err != nil {
+			continue
+		}
+		if result.ID == "" {
+			result.ID = "unknown"
+		}
+		stats[result.ID] = result.Count
+	}
+
+	return stats, nil
+}

@@ -14,6 +14,27 @@ func AchievementRoute(API *fiber.App) {
 	// Semua endpoint butuh JWT authentication
 	achievements.Use(middleware.JWTAuth())
 
+	// GET /api/v1/achievements/stats/my - Statistics prestasi sendiri (Mahasiswa)
+	// Permission: write_achievements
+	// FR-011: Achievement Statistics (Own)
+	achievements.Get("/stats/my",
+		middleware.RequirePermission("write_achievements"),
+		service.GetMyAchievementStatsService)
+
+	// GET /api/v1/achievements/stats/advisee - Statistics prestasi mahasiswa bimbingan (Dosen Wali)
+	// Permission: verify_achievements
+	// FR-011: Achievement Statistics (Advisee)
+	achievements.Get("/stats/advisee",
+		middleware.RequirePermission("verify_achievements"),
+		service.GetAdviseeAchievementStatsService)
+
+	// GET /api/v1/achievements/stats/all - Statistics semua prestasi (Admin)
+	// Permission: read_achievements
+	// FR-011: Achievement Statistics (All)
+	achievements.Get("/stats/all",
+		middleware.RequirePermission("read_achievements"),
+		service.GetAllAchievementStatsService)
+
 	// GET /api/v1/achievements/advisee - View prestasi mahasiswa bimbingan (Dosen Wali)
 	// Permission: verify_achievements
 	// FR-006: View Prestasi Mahasiswa Bimbingan

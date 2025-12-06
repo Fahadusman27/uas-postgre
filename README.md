@@ -283,6 +283,101 @@ Response:
 }
 ```
 
+#### FR-011: Achievement Statistics (Mahasiswa - Own)
+```bash
+GET /api/v1/achievements/stats/my
+Authorization: Bearer <token>
+Permission: write_achievements
+```
+
+Response:
+```json
+{
+  "message": "Berhasil mengambil statistik prestasi",
+  "data": {
+    "total": 15,
+    "by_type": {
+      "competition": 8,
+      "academic": 4,
+      "organization": 3
+    },
+    "by_period": {
+      "2024-12": 5,
+      "2024-11": 7,
+      "2024-10": 3
+    },
+    "by_status": {
+      "verified": 10,
+      "submitted": 3,
+      "draft": 2
+    },
+    "competition_level_distribution": {
+      "international": 2,
+      "national": 4,
+      "regional": 2
+    }
+  }
+}
+```
+
+#### FR-011: Achievement Statistics (Dosen Wali - Advisee)
+```bash
+GET /api/v1/achievements/stats/advisee
+Authorization: Bearer <token>
+Permission: verify_achievements
+```
+
+Response:
+```json
+{
+  "message": "Berhasil mengambil statistik prestasi mahasiswa bimbingan",
+  "data": {
+    "total": 45,
+    "by_type": {
+      "competition": 20,
+      "academic": 15,
+      "organization": 10
+    },
+    "by_period": {
+      "2024-12": 15,
+      "2024-11": 20,
+      "2024-10": 10
+    },
+    "by_status": {
+      "verified": 30,
+      "submitted": 10,
+      "draft": 5
+    },
+    "competition_level_distribution": {
+      "international": 5,
+      "national": 10,
+      "regional": 5
+    },
+    "top_students": [
+      {
+        "student_id": "NIM001",
+        "program_study": "Teknik Informatika",
+        "count": 8
+      },
+      {
+        "student_id": "NIM002",
+        "program_study": "Sistem Informasi",
+        "count": 6
+      }
+    ]
+  }
+}
+```
+
+#### FR-011: Achievement Statistics (Admin - All)
+```bash
+GET /api/v1/achievements/stats/all
+Authorization: Bearer <token>
+Permission: read_achievements
+```
+
+Response: (Same structure as advisee stats)
+
 ### User Management Endpoints (Admin)
 
 #### FR-009: Create User
@@ -402,9 +497,87 @@ psql -U your_user -d your_database -c "SELECT version();"
 mongosh --eval "db.version()"
 ```
 
+### Unit Testing
+
+Project ini dilengkapi dengan unit tests untuk memastikan kualitas kode.
+
+#### Run All Tests
+```bash
+go test ./... -v
+```
+
+#### Run Specific Package Tests
+```bash
+# Test middleware
+go test ./Domain/middleware/... -v
+
+# Test services (validation only)
+go test ./Domain/service -run "TestSubmitAchievementService|TestRejectAchievementService" -v
+
+# Test user service
+go test ./Domain/service -run "TestCreateUserService|TestAssignRoleService" -v
+```
+
+#### Test Coverage
+```bash
+go test ./... -cover
+```
+
+#### Test Files
+- `Domain/service/AuthService_test.go` - Tests untuk authentication service
+- `Domain/service/AchievementService_test.go` - Tests untuk achievement service
+- `Domain/service/UserService_test.go` - Tests untuk user management service
+- `Domain/middleware/TokenMiddleware_test.go` - Tests untuk JWT middleware
+
+#### Testing Strategy
+- **Unit Tests**: Test individual functions dengan mock dependencies
+- **Validation Tests**: Test input validation tanpa database
+- **Middleware Tests**: Test authentication dan authorization logic
+- **Integration Tests**: (Future) Test dengan real database connections
+
+#### Test Examples
+
+**Middleware Test - JWT Authentication:**
+```go
+func TestJWTAuth_MissingToken(t *testing.T) {
+    app := fiber.New()
+    app.Use(JWTAuth())
+    app.Get("/protected", func(c *fiber.Ctx) error {
+        return c.SendString("Protected route")
+    })
+    
+    req := httptest.NewRequest("GET", "/protected", nil)
+    resp, err := app.Test(req)
+    
+    assert.NoError(t, err)
+    assert.Equal(t, fiber.StatusUnauthorized, resp.StatusCode)
+}
+```
+
+**Service Test - Input Validation:**
+```go
+func TestSubmitAchievementService_InvalidAchievementType(t *testing.T) {
+    app := fiber.New()
+    app.Post("/achievements", SubmitAchievementService)
+    
+    achievementData := map[string]interface{}{
+        "achievementType": "invalid_type",
+        "title":           "Test Achievement",
+    }
+    body, _ := json.Marshal(achievementData)
+    
+    req := httptest.NewRequest("POST", "/achievements", bytes.NewBuffer(body))
+    resp, err := app.Test(req)
+    
+    assert.NoError(t, err)
+    assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
+}
+```
+
 ## 📚 Documentation Files
 
 - `DATABASE_SCHEMA.md` - Skema database lengkap
+- `TESTING.md` - Dokumentasi unit testing lengkap
 - `PERBAIKAN.md` - Detail perbaikan yang dilakukan
 - `RINGKASAN_PERBAIKAN.md` - Ringkasan perbaikan
 
@@ -424,6 +597,7 @@ mongosh --eval "db.version()"
 - ✅ FR-008: Reject Prestasi (Dosen Wali)
 - ✅ FR-009: Manage Users - CRUD, Assign Role, Set Profile (Admin)
 - ✅ FR-010: View All Achievements - Filters, Sorting, Pagination (Admin)
+- ✅ FR-011: Achievement Statistics - By Type, Period, Top Students (All Roles)
 
 ## 📄 License
 

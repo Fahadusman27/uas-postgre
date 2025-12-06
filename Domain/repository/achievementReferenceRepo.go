@@ -382,3 +382,110 @@ func GetAllAchievementReferencesWithFilters(limit, offset int, status, studentID
 
 	return references, total, nil
 }
+
+// GetTopStudentsByAchievementCount mengambil top mahasiswa berdasarkan jumlah prestasi
+func GetTopStudentsByAchievementCount(studentIDs []uuid.UUID, limit int, status string) ([]struct {
+	StudentID uuid.UUID
+	Count     int
+}, error) {
+	query := `
+		SELECT student_id, COUNT(*) as count
+		FROM achievement_references
+		WHERE student_id = ANY($1)
+	`
+
+	// Add status filter if provided
+	args := []interface{}{"{" + strings.Join(func() []string {
+		strs := make([]string, len(studentIDs))
+		for i, id := range studentIDs {
+			strs[i] = id.String()
+		}
+		return strs
+	}(), ",") + "}"}
+
+	if status != "" {
+		query += " AND status = $2"
+		args = append(args, status)
+		query += " GROUP BY student_id ORDER BY count DESC LIMIT $3"
+		args = append(args, limit)
+	} else {
+		query += " GROUP BY student_id ORDER BY count DESC LIMIT $2"
+		args = append(args, limit)
+	}
+
+	rows, err := config.DB.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type StudentCount struct {
+		StudentID uuid.UUID
+		Count     int
+	}
+
+	var results []StudentCount
+	for rows.Next() {
+		var sc StudentCount
+		err := rows.Scan(&sc.StudentID, &sc.Count)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, sc)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	// Convert to anonymous struct slice
+	finalResults := make([]struct {
+		StudentID uuid.UUID
+		Count     int
+	}, len(results))
+
+	for i, r := range results {
+		finalResults[i].StudentID = r.StudentID
+		finalResults[i].Count = r.Count
+	}
+
+	return finalResults, nil
+}
+
+// GetAchievementCountByStatus mengambil jumlah prestasi per status
+func GetAchievementCountByStatus(studentIDs []uuid.UUID) (map[string]int, error) {
+	query := `
+		SELECT status, COUNT(*) as count
+		FROM achievement_references
+		WHERE student_id = ANY($1)
+		GROUP BY status
+	`
+
+	studentIDStrings := make([]string, len(studentIDs))
+	for i, id := range studentIDs {
+		studentIDStrings[i] = id.String()
+	}
+
+	rows, err := config.DB.Query(query, "{"+strings.Join(studentIDStrings, ",")+"}")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stats := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		err := rows.Scan(&status, &count)
+		if err != nil {
+			return nil, err
+		}
+		stats[status] = count
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return stats, nil
+}

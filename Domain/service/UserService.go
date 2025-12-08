@@ -18,6 +18,17 @@ type CreateUserRequest struct {
 }
 
 // CreateUserService - FR-009: Create User
+// @Summary Create new user
+// @Description Create new user with role assignment (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param user body CreateUserRequest true "User data"
+// @Success 201 {object} map[string]interface{} "User created"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 409 {object} map[string]interface{} "Conflict - username/email exists"
+// @Router /api/v1/users [post]
 func CreateUserService(c *fiber.Ctx) error {
 	var req CreateUserRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -86,6 +97,17 @@ func CreateUserService(c *fiber.Ctx) error {
 }
 
 // GetUsersService - FR-009: List Users
+// @Summary List all users
+// @Description Get list of all users with pagination (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/users [get]
 func GetUsersService(c *fiber.Ctx) error {
 	// Parse pagination parameters
 	page := c.QueryInt("page", 1)
@@ -124,6 +146,16 @@ func GetUsersService(c *fiber.Ctx) error {
 }
 
 // GetUserDetailService - FR-009: Get User Detail
+// @Summary Get user detail
+// @Description Get detailed information of a user including profiles (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/users/{id} [get]
 func GetUserDetailService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)
@@ -166,6 +198,18 @@ type UpdateUserRequest struct {
 }
 
 // UpdateUserService - FR-009: Update User
+// @Summary Update user
+// @Description Update user information (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Param user body UpdateUserRequest true "User data"
+// @Success 200 {object} map[string]interface{} "Updated successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/users/{id} [put]
 func UpdateUserService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)
@@ -226,6 +270,16 @@ func UpdateUserService(c *fiber.Ctx) error {
 }
 
 // DeleteUserService - FR-009: Delete User
+// @Summary Delete user
+// @Description Delete user and associated profiles (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Success 200 {object} map[string]interface{} "Deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Router /api/v1/users/{id} [delete]
 func DeleteUserService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)
@@ -254,6 +308,17 @@ type AssignRoleRequest struct {
 }
 
 // AssignRoleService - FR-009: Assign Role
+// @Summary Assign role to user
+// @Description Assign or change user role (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Param role body AssignRoleRequest true "Role data"
+// @Success 200 {object} map[string]interface{} "Role assigned"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Router /api/v1/users/{id}/role [put]
 func AssignRoleService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)
@@ -303,6 +368,17 @@ type SetStudentProfileRequest struct {
 }
 
 // SetStudentProfileService - FR-009: Set Student Profile
+// @Summary Set student profile
+// @Description Create or update student profile with advisor (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Param profile body SetStudentProfileRequest true "Student profile data"
+// @Success 200 {object} map[string]interface{} "Profile saved"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Router /api/v1/users/{id}/student [post]
 func SetStudentProfileService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)
@@ -384,6 +460,17 @@ type SetLecturerProfileRequest struct {
 }
 
 // SetLecturerProfileService - FR-009: Set Lecturer Profile
+// @Summary Set lecturer profile
+// @Description Create or update lecturer profile (Admin)
+// @Tags User Management
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "User UUID"
+// @Param profile body SetLecturerProfileRequest true "Lecturer profile data"
+// @Success 200 {object} map[string]interface{} "Profile saved"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Router /api/v1/users/{id}/lecturer [post]
 func SetLecturerProfileService(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	userUUID, err := uuid.Parse(userID)

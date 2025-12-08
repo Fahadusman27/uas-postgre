@@ -23,6 +23,17 @@ type SubmitAchievementRequest struct {
 }
 
 // SubmitAchievementService - Flow submit prestasi (FR-003)
+// @Summary Submit new achievement
+// @Description Create new achievement as draft (Mahasiswa)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param achievement body SubmitAchievementRequest true "Achievement data"
+// @Success 201 {object} map[string]interface{} "Achievement created"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements [post]
 func SubmitAchievementService(c *fiber.Ctx) error {
 	// Flow 1: Mahasiswa mengisi data prestasi
 	var req SubmitAchievementRequest
@@ -142,6 +153,18 @@ func SubmitAchievementService(c *fiber.Ctx) error {
 }
 
 // SubmitForVerificationService - FR-004: Submit untuk Verifikasi
+// @Summary Submit achievement for verification
+// @Description Submit draft achievement for verification by advisor (Mahasiswa)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID (MongoDB ObjectID)"
+// @Success 200 {object} map[string]interface{} "Submitted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/achievements/{id}/submit [post]
 func SubmitForVerificationService(c *fiber.Ctx) error {
 	// Flow 1: Mahasiswa submit prestasi
 	achievementID := c.Params("id")
@@ -219,6 +242,18 @@ func SubmitForVerificationService(c *fiber.Ctx) error {
 }
 
 // DeleteAchievementService - FR-005: Hapus Prestasi
+// @Summary Delete achievement
+// @Description Delete draft achievement (Mahasiswa)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID (MongoDB ObjectID)"
+// @Success 200 {object} map[string]interface{} "Deleted successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/achievements/{id} [delete]
 func DeleteAchievementService(c *fiber.Ctx) error {
 	// Get achievement_id dari URL parameter
 	achievementID := c.Params("id")
@@ -298,6 +333,17 @@ func DeleteAchievementService(c *fiber.Ctx) error {
 }
 
 // GetAdviseeAchievementsService - FR-006: View Prestasi Mahasiswa Bimbingan
+// @Summary View advisee achievements
+// @Description Get achievements of students under advisor supervision (Dosen Wali)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements/advisee [get]
 func GetAdviseeAchievementsService(c *fiber.Ctx) error {
 	// Get user_id dari JWT context
 	userID := c.Locals("id").(string)
@@ -460,6 +506,18 @@ func GetAdviseeAchievementsService(c *fiber.Ctx) error {
 }
 
 // VerifyAchievementService - FR-007: Verify Prestasi
+// @Summary Verify achievement
+// @Description Verify submitted achievement (Dosen Wali)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID (MongoDB ObjectID)"
+// @Success 200 {object} map[string]interface{} "Verified successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/achievements/{id}/verify [post]
 func VerifyAchievementService(c *fiber.Ctx) error {
 	// Get achievement_id dari URL parameter
 	achievementID := c.Params("id")
@@ -556,6 +614,19 @@ type RejectAchievementRequest struct {
 }
 
 // RejectAchievementService - FR-008: Reject Prestasi
+// @Summary Reject achievement
+// @Description Reject submitted achievement with note (Dosen Wali)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Achievement ID (MongoDB ObjectID)"
+// @Param rejection body RejectAchievementRequest true "Rejection note"
+// @Success 200 {object} map[string]interface{} "Rejected successfully"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Failure 404 {object} map[string]interface{} "Not found"
+// @Router /api/v1/achievements/{id}/reject [post]
 func RejectAchievementService(c *fiber.Ctx) error {
 	// Get achievement_id dari URL parameter
 	achievementID := c.Params("id")
@@ -659,6 +730,21 @@ func RejectAchievementService(c *fiber.Ctx) error {
 }
 
 // GetAllAchievementsService - FR-010: View All Achievements (Admin)
+// @Summary View all achievements
+// @Description Get all achievements with filters and pagination (Admin)
+// @Tags Achievements
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(10)
+// @Param status query string false "Filter by status" Enums(draft, submitted, verified, rejected)
+// @Param student_id query string false "Filter by student UUID"
+// @Param sort query string false "Sort by field" Enums(created_at, submitted_at, verified_at, updated_at) default(created_at)
+// @Param order query string false "Sort order" Enums(asc, desc) default(desc)
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements [get]
 func GetAllAchievementsService(c *fiber.Ctx) error {
 	// Parse pagination parameters
 	page := c.QueryInt("page", 1)
@@ -802,6 +888,15 @@ func GetAllAchievementsService(c *fiber.Ctx) error {
 }
 
 // GetMyAchievementStatsService - FR-011: Achievement Statistics (Mahasiswa - Own)
+// @Summary Get my achievement statistics
+// @Description Get statistics of own achievements (Mahasiswa)
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements/stats/my [get]
 func GetMyAchievementStatsService(c *fiber.Ctx) error {
 	// Get user_id dari JWT context
 	userID := c.Locals("id").(string)
@@ -871,6 +966,15 @@ func GetMyAchievementStatsService(c *fiber.Ctx) error {
 }
 
 // GetAdviseeAchievementStatsService - FR-011: Achievement Statistics (Dosen Wali - Advisee)
+// @Summary Get advisee achievement statistics
+// @Description Get statistics of advisee achievements (Dosen Wali)
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements/stats/advisee [get]
 func GetAdviseeAchievementStatsService(c *fiber.Ctx) error {
 	// Get user_id dari JWT context
 	userID := c.Locals("id").(string)
@@ -992,6 +1096,15 @@ func GetAdviseeAchievementStatsService(c *fiber.Ctx) error {
 }
 
 // GetAllAchievementStatsService - FR-011: Achievement Statistics (Admin - All)
+// @Summary Get all achievement statistics
+// @Description Get statistics of all achievements (Admin)
+// @Tags Statistics
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Success"
+// @Failure 403 {object} map[string]interface{} "Forbidden"
+// @Router /api/v1/achievements/stats/all [get]
 func GetAllAchievementStatsService(c *fiber.Ctx) error {
 	// Get all achievement references (no filter)
 	references, total, err := repository.GetAllAchievementReferencesWithFilters(100000, 0, "", "", "created_at", "desc")

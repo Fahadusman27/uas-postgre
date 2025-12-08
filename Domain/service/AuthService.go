@@ -12,6 +12,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// LoginService handles user login
+// @Summary Login user
+// @Description Authenticate user and return JWT token
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Param credentials body model.LoginRequest true "Login credentials"
+// @Success 200 {object} map[string]interface{} "Login successful"
+// @Failure 400 {object} map[string]interface{} "Bad request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /auth/login [post]
 func LoginService(c *fiber.Ctx) error {
 	var body model.Login
 
@@ -97,6 +108,16 @@ func LoginService(c *fiber.Ctx) error {
 	})
 }
 
+// LogoutService handles user logout
+// @Summary Logout user
+// @Description Invalidate JWT token and logout user
+// @Tags Authentication
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Logout successful"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Router /auth/logout [post]
 func LogoutService(c *fiber.Ctx) error {
 	authHeader := c.Get("Authorization")
 	if authHeader == "" {

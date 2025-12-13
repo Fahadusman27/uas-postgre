@@ -2,12 +2,11 @@ package route
 
 import (
 	"GOLANG/Domain/middleware"
-	"GOLANG/Domain/service"
 
 	"github.com/gofiber/fiber/v2"
 )
 
-// UserRoute - FR-009: Manage Users
+// UserRoute - FR-009: Manage Users (Tanpa Handler Eksplisit)
 func UserRoute(API *fiber.App) {
 	users := API.Group("/api/v1/users")
 
@@ -17,33 +16,33 @@ func UserRoute(API *fiber.App) {
 
 	// POST /api/v1/users - Create user
 	users.Post("/",
-		service.CreateUserService)
+		middleware.CallService("UserService", "CreateUser"))
 
 	// GET /api/v1/users - List users dengan pagination
 	users.Get("/",
-		service.GetUsersService)
+		middleware.CallService("UserService", "GetUsers"))
 
 	// GET /api/v1/users/:id - Get user detail
 	users.Get("/:id",
-		service.GetUserDetailService)
+		middleware.CallService("UserService", "GetUserDetail"))
 
 	// PUT /api/v1/users/:id - Update user
 	users.Put("/:id",
-		service.UpdateUserService)
+		middleware.CallService("UserService", "UpdateUser"))
 
 	// DELETE /api/v1/users/:id - Delete user
 	users.Delete("/:id",
-		service.DeleteUserService)
+		middleware.CallService("UserService", "DeleteUser"))
 
 	// PUT /api/v1/users/:id/role - Assign role
 	users.Put("/:id/role",
-		service.AssignRoleService)
+		middleware.CallService("UserService", "AssignRole"))
 
 	// POST /api/v1/users/:id/student - Set student profile
 	users.Post("/:id/student",
-		service.SetStudentProfileService)
+		middleware.CallService("UserService", "SetStudentProfile"))
 
 	// POST /api/v1/users/:id/lecturer - Set lecturer profile
 	users.Post("/:id/lecturer",
-		service.SetLecturerProfileService)
+		middleware.CallService("UserService", "SetLecturerProfile"))
 }

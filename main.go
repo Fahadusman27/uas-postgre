@@ -51,6 +51,8 @@ func main() {
 	route.AuthRoute(app)
 	route.UserRoute(app)
 	route.AchievementRoute(app)
+	route.StudentRoute(app)
+	route.ReportRoute(app)
 
 	port := "4000"
 	log.Printf("Server running on port %s", port)

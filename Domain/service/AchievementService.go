@@ -11,17 +11,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-// SubmitAchievementRequest DTO untuk request submit prestasi
-type SubmitAchievementRequest struct {
-	AchievementType string                     `json:"achievementType"`
-	Title           string                     `json:"title"`
-	Description     string                     `json:"description"`
-	Details         mongodb.AchievementDetails `json:"details"`
-	CustomFields    map[string]any             `json:"customFields,omitempty"`
-	Attachments     []mongodb.Attachment       `json:"attachments"`
-	Tags            []string                   `json:"tags"`
-}
-
 // SubmitAchievementService - Flow submit prestasi (FR-003)
 // @Summary Submit new achievement
 // @Description Create new achievement as draft (Mahasiswa)
@@ -29,14 +18,14 @@ type SubmitAchievementRequest struct {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param achievement body SubmitAchievementRequest true "Achievement data"
+// @Param achievement body mongodb.Achievement true "Achievement data"
 // @Success 201 {object} map[string]interface{} "Achievement created"
 // @Failure 400 {object} map[string]interface{} "Bad request"
 // @Failure 403 {object} map[string]interface{} "Forbidden"
 // @Router /api/v1/achievements [post]
 func SubmitAchievementService(c *fiber.Ctx) error {
 	// Flow 1: Mahasiswa mengisi data prestasi
-	var req SubmitAchievementRequest
+	var req mongodb.Achievement
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Invalid request body",
@@ -97,21 +86,17 @@ func SubmitAchievementService(c *fiber.Ctx) error {
 
 	// Flow 3: Sistem simpan ke MongoDB (achievement) dan PostgreSQL (reference)
 
-	// 3a. Buat achievement object untuk MongoDB
-	achievement := &mongodb.Achievement{
-		StudentID:       student.ID,
-		AchievementType: req.AchievementType,
-		Title:           req.Title,
-		Description:     req.Description,
-		Details:         req.Details,
-		CustomFields:    req.CustomFields,
-		Attachments:     req.Attachments,
-		Tags:            req.Tags,
-		Points:          0, // Default 0, bisa dihitung nanti berdasarkan rules
-	}
+	// 3a. Set data yang diperlukan untuk achievement
+	req.StudentID = student.ID
+	req.Points = 0 // Default 0, bisa dihitung nanti berdasarkan rules
+
+	// Set timestamps
+	now := time.Now()
+	req.CreatedAt = now
+	req.UpdatedAt = now
 
 	// 3b. Simpan ke MongoDB
-	savedAchievement, err := repository.CreateAchievement(achievement)
+	savedAchievement, err := repository.CreateAchievement(&req)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error":   "Gagal menyimpan achievement ke database",
@@ -609,6 +594,7 @@ func VerifyAchievementService(c *fiber.Ctx) error {
 }
 
 // RejectAchievementRequest DTO untuk request reject prestasi
+// Struct ini tetap diperlukan karena hanya berisi rejection note saja
 type RejectAchievementRequest struct {
 	RejectionNote string `json:"rejection_note"`
 }

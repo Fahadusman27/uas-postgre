@@ -253,20 +253,53 @@ func UpdateUserService(c *fiber.Ctx) error {
 		})
 	}
 
-	// Update password if provided
-	if req.Password != "" {
-		err = repository.UpdateUserPassword(userUUID, req.Password)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Gagal update password",
-			})
-		}
-	}
-
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User berhasil diupdate",
 		"data":    user,
 	})
+}
+
+func UpdateUserPasswordService(c *fiber.Ctx) error {
+    userID := c.Params("id")
+    userUUID, err := uuid.Parse(userID)
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Invalid user ID",
+        })
+    }
+
+    var req model.Login
+    
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Invalid request body",
+        })
+    }
+
+    if req.Password == "" {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Password tidak boleh kosong",
+        })
+    }
+
+    _, err = repository.GetUserByIDWithDetails(userUUID)
+    if err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+            "error": "User tidak ditemukan",
+        })
+    }
+
+    err = repository.UpdateUserPassword(userUUID, req.Password)
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Gagal update password",
+            "errors": err.Error(),
+        })
+    }
+
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{
+        "message": "Password berhasil diupdate",
+    })
 }
 
 // DeleteUserService - FR-009: Delete User
@@ -299,63 +332,6 @@ func DeleteUserService(c *fiber.Ctx) error {
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"message": "User berhasil dihapus",
-	})
-}
-
-// AssignRoleRequest DTO untuk assign role
-type AssignRoleRequest struct {
-	RoleID string `json:"role_id"`
-}
-
-// AssignRoleService - FR-009: Assign Role
-// @Summary Assign role to user
-// @Description Assign or change user role (Admin)
-// @Tags User Management
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Param id path string true "User UUID"
-// @Param role body AssignRoleRequest true "Role data"
-// @Success 200 {object} map[string]interface{} "Role assigned"
-// @Failure 400 {object} map[string]interface{} "Bad request"
-// @Router /api/v1/users/{id}/role [put]
-func AssignRoleService(c *fiber.Ctx) error {
-	userID := c.Params("id")
-	userUUID, err := uuid.Parse(userID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid user ID",
-		})
-	}
-
-	var req AssignRoleRequest
-	if err := c.BodyParser(&req); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid request body",
-		})
-	}
-
-	roleID, err := uuid.Parse(req.RoleID)
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid role ID",
-		})
-	}
-
-	// Update role
-	err = repository.UpdateUserRole(userUUID, roleID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Gagal assign role",
-		})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Role berhasil di-assign",
-		"data": fiber.Map{
-			"user_id": userUUID,
-			"role_id": roleID,
-		},
 	})
 }
 

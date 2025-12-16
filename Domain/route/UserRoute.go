@@ -34,9 +34,9 @@ func UserRoute(API *fiber.App) {
 	users.Delete("/:id",
 		middleware.CallService("UserService", "DeleteUser"))
 
-	// PUT /api/v1/users/:id/role - Assign role
+	// PUT /api/v1/users/:id/role - Assign Password
 	users.Put("/:id/role",
-		middleware.CallService("UserService", "AssignRole"))
+		middleware.CallService("UserService", "AssignPassword"))
 
 	// POST /api/v1/users/:id/student - Set student profile
 	users.Post("/:id/student",

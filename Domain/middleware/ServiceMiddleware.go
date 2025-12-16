@@ -67,8 +67,8 @@ func callUserService(c *fiber.Ctx, methodName string) error {
 		return service.UpdateUserService(c)
 	case "DeleteUser":
 		return service.DeleteUserService(c)
-	case "AssignRole":
-		return service.AssignRoleService(c)
+	case "AssignPassword":
+		return service.UpdateUserPasswordService(c)
 	case "SetStudentProfile":
 		return service.SetStudentProfileService(c)
 	case "SetLecturerProfile":

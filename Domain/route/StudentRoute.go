@@ -6,7 +6,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// StudentRoute - 5.5 Students & Lecturers (Tanpa Handler Eksplisit)
 func StudentRoute(API *fiber.App) {
 	// Students endpoints
 	students := API.Group("/api/v1/students")

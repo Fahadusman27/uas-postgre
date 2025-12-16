@@ -97,24 +97,6 @@ func TestCreateUserService_InvalidRoleID(t *testing.T) {
 	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
 }
 
-// TestAssignRoleService_InvalidUserID tests assign role with invalid user ID
-func TestAssignRoleService_InvalidUserID(t *testing.T) {
-	app := fiber.New()
-	app.Put("/users/:id/role", service.AssignRoleService)
-
-	roleData := map[string]string{
-		"role_id": "550e8400-e29b-41d4-a716-446655440000",
-	}
-	body, _ := json.Marshal(roleData)
-
-	req := httptest.NewRequest("PUT", "/users/invalid-id/role", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := app.Test(req)
-	assert.NoError(t, err)
-	assert.Equal(t, fiber.StatusBadRequest, resp.StatusCode)
-}
-
 // TestSetStudentProfileService_MissingRequiredFields tests set student profile with missing fields
 func TestSetStudentProfileService_MissingRequiredFields(t *testing.T) {
 	app := fiber.New()

@@ -157,7 +157,7 @@ func UpdateUserPassword(userID uuid.UUID, newPassword string) error {
 		return err
 	}
 
-	query := `UPDATE users SET password = $1 WHERE id = $2`
+	query := `UPDATE users SET password_hash = $1 WHERE id = $2`
 	_, err = config.DB.Exec(query, string(hashedPassword), userID)
 	return err
 }
@@ -199,26 +199,6 @@ func DeleteUser(userID uuid.UUID) error {
 	}
 
 	return tx.Commit()
-}
-
-// UpdateUserRole assign role ke user
-func UpdateUserRole(userID, roleID uuid.UUID) error {
-	query := `UPDATE users SET role_id = $1 WHERE id = $2`
-	result, err := config.DB.Exec(query, roleID, userID)
-	if err != nil {
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if rowsAffected == 0 {
-		return errors.New("user tidak ditemukan")
-	}
-
-	return nil
 }
 
 // CreateStudentProfile membuat profile student
